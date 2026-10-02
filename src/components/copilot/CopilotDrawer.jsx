@@ -1,6 +1,228 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, Sparkles, User, ShieldAlert, CornerDownRight } from 'lucide-react';
+import { Bot, Send, Sparkles, User, ShieldAlert, CornerDownRight, Copy, Check } from 'lucide-react';
 import { askCopilot } from '../../services/api';
+
+const renderInlineFormatting = (text) => {
+  if (!text) return null;
+
+  // Split text by **bold** markers
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      const content = part.slice(2, -2);
+
+      // 1. Currency / Budget values (e.g., Rs. 1.8 Cr, ₹1.8 Cr, $150k)
+      if (/(?:Rs\.?|₹|\$|USD|INR|\bCr\b|\bLakh\b)/i.test(content)) {
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center gap-0.5 px-2 py-0.5 mx-0.5 rounded-md font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] shadow-sm"
+          >
+            {content}
+          </span>
+        );
+      }
+
+      // 2. Score metrics (e.g., 95/100, Score: 80/100)
+      if (/\b\d{1,3}\s*\/\s*100\b/.test(content)) {
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center gap-0.5 px-2 py-0.5 mx-0.5 rounded-md font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] shadow-sm"
+          >
+            {content}
+          </span>
+        );
+      }
+
+      // 3. Priority & Urgency status badges (e.g., HOT, WARM, COLD, URGENT)
+      if (/\b(HOT|WARM|COLD|URGENT|READY-TO-MOVE|HIGH|MEDIUM|LOW)\b/i.test(content)) {
+        let badgeStyle = 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+        const upper = content.toUpperCase();
+        if (upper.includes('HOT') || upper.includes('URGENT') || upper.includes('HIGH')) {
+          badgeStyle = 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+        } else if (upper.includes('WARM') || upper.includes('MEDIUM')) {
+          badgeStyle = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+        } else if (upper.includes('COLD') || upper.includes('LOW')) {
+          badgeStyle = 'bg-sky-500/20 text-sky-300 border-sky-500/30';
+        }
+        return (
+          <span
+            key={i}
+            className={`inline-flex items-center px-2 py-0.5 mx-0.5 rounded-md font-extrabold border text-[10px] tracking-wider uppercase ${badgeStyle}`}
+          >
+            {content}
+          </span>
+        );
+      }
+
+      // Standard bold text
+      return (
+        <strong key={i} className="font-bold text-white">
+          {content}
+        </strong>
+      );
+    }
+
+    return part;
+  });
+};
+
+function CopilotMessageFormatter({ text }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!text) return null;
+
+  const handleCopy = () => {
+    const plainText = text.replace(/\*\*/g, '').replace(/^#+\s*/gm, '');
+    navigator.clipboard.writeText(plainText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const rawBlocks = text.split(/\n\n+/);
+
+  return (
+    <div className="space-y-3 text-xs text-slate-200 leading-relaxed relative">
+      {rawBlocks.map((block, bIdx) => {
+        const lines = block.split('\n').filter((l) => l.trim().length > 0);
+        if (lines.length === 0) return null;
+
+        const firstLine = lines[0].trim();
+
+        // 1. Is Section Header (e.g. **Header:** or ### Header)
+        const isHeaderOnly =
+          lines.length === 1 &&
+          ((firstLine.startsWith('**') && firstLine.endsWith('**')) ||
+            firstLine.startsWith('#') ||
+            (firstLine.startsWith('**') && firstLine.includes(':**')));
+
+        if (isHeaderOnly) {
+          const headerText = firstLine.replace(/^[\*#\s]+|[\*#\s]+$/g, '');
+          return (
+            <div
+              key={bIdx}
+              className="flex items-center gap-1.5 font-bold text-purple-300 text-[12.5px] pt-1 pb-1 border-b border-purple-500/20"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-purple-400 flex-shrink-0" />
+              <span>{headerText}</span>
+            </div>
+          );
+        }
+
+        // 2. Check if pure list
+        const isPureList = lines.every((l) => {
+          const t = l.trim();
+          return t.startsWith('- ') || t.startsWith('* ') || /^\d+\.\s/.test(t);
+        });
+
+        if (isPureList) {
+          return (
+            <div key={bIdx} className="space-y-1.5 my-1">
+              {lines.map((line, lIdx) => {
+                const cleanLine = line.trim().replace(/^[-*\d.]+\s*/, '');
+                return (
+                  <div
+                    key={lIdx}
+                    className="flex items-start gap-2 bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/40 p-2 px-2.5 rounded-lg transition-colors shadow-sm"
+                  >
+                    <div className="h-1.5 w-1.5 rounded-full bg-purple-400 mt-1.5 flex-shrink-0" />
+                    <div className="flex-1 leading-relaxed text-slate-200">
+                      {renderInlineFormatting(cleanLine)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
+        // 3. Mixed block
+        return (
+          <div key={bIdx} className="space-y-1.5">
+            {lines.map((line, lIdx) => {
+              const trimmed = line.trim();
+
+              if (
+                (trimmed.startsWith('**') && trimmed.endsWith(':**')) ||
+                (trimmed.startsWith('**') && trimmed.endsWith('**') && trimmed.length < 50)
+              ) {
+                const headerText = trimmed.replace(/^[\*#\s]+|[\*#\s]+$/g, '');
+                return (
+                  <div
+                    key={lIdx}
+                    className="flex items-center gap-1.5 font-bold text-purple-300 text-[12px] pt-1 border-b border-slate-800 pb-1"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-purple-400 flex-shrink-0" />
+                    <span>{headerText}</span>
+                  </div>
+                );
+              }
+
+              if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
+                const cleanLine = trimmed.replace(/^[-*\d.]+\s*/, '');
+                return (
+                  <div
+                    key={lIdx}
+                    className="flex items-start gap-2 bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/40 p-2 px-2.5 rounded-lg transition-colors shadow-sm my-1"
+                  >
+                    <div className="h-1.5 w-1.5 rounded-full bg-purple-400 mt-1.5 flex-shrink-0" />
+                    <div className="flex-1 leading-relaxed text-slate-200">
+                      {renderInlineFormatting(cleanLine)}
+                    </div>
+                  </div>
+                );
+              }
+
+              if (
+                trimmed.startsWith('"') ||
+                trimmed.startsWith('“') ||
+                trimmed.startsWith('Per customer') ||
+                trimmed.startsWith('Context from message:')
+              ) {
+                return (
+                  <div
+                    key={lIdx}
+                    className="border-l-2 border-purple-500 bg-purple-950/20 p-2 px-2.5 rounded-r-lg text-purple-200 text-[11.5px] italic my-1 shadow-inner"
+                  >
+                    {renderInlineFormatting(trimmed)}
+                  </div>
+                );
+              }
+
+              return (
+                <p key={lIdx} className="text-slate-300 leading-relaxed">
+                  {renderInlineFormatting(trimmed)}
+                </p>
+              );
+            })}
+          </div>
+        );
+      })}
+
+      <div className="flex justify-end pt-1">
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-purple-300 transition-colors opacity-80 hover:opacity-100 bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-700/40"
+          title="Copy formatted answer"
+        >
+          {copied ? (
+            <>
+              <Check className="h-3 w-3 text-emerald-400" />
+              <span className="text-emerald-400 font-semibold">Copied</span>
+            </>
+          ) : (
+            <>
+              <Copy className="h-3 w-3" />
+              <span>Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function CopilotDrawer({ lead }) {
   const [messages, setMessages] = useState([]);
@@ -94,13 +316,17 @@ export default function CopilotDrawer({ lead }) {
               </div>
             )}
             <div
-              className={`max-w-[85%] p-3 rounded-xl leading-relaxed whitespace-pre-wrap ${
+              className={`max-w-[88%] p-3 rounded-xl leading-relaxed ${
                 msg.sender === 'user'
-                  ? 'bg-blue-600 text-white rounded-br-none shadow-md'
-                  : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none'
+                  ? 'bg-blue-600 text-white rounded-br-none shadow-md whitespace-pre-wrap'
+                  : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-bl-none shadow-lg'
               }`}
             >
-              {msg.text}
+              {msg.sender === 'user' ? (
+                msg.text
+              ) : (
+                <CopilotMessageFormatter text={msg.text} />
+              )}
             </div>
             {msg.sender === 'user' && (
               <div className="h-7 w-7 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -171,3 +397,4 @@ export default function CopilotDrawer({ lead }) {
     </div>
   );
 }
+
