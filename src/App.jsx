@@ -4,6 +4,7 @@ import { LeadProvider } from './context/LeadContext';
 import Navbar from './components/layout/Navbar';
 import DashboardPage from './pages/DashboardPage';
 import LeadDetailPage from './pages/LeadDetailPage';
+import PrivacyPage from './pages/PrivacyPage';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/leads/:id" element={<LeadDetailPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
             </Routes>
           </main>
         </div>
