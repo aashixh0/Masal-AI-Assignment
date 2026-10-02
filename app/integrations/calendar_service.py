@@ -18,15 +18,16 @@ class GoogleCalendarService:
 
     def get_auth_url(self) -> str:
         """Returns the Google OAuth consent URL for Google Calendar permission."""
+        from urllib.parse import urlencode
         params = {
-            "client_id": self.client_id,
-            "redirect_uri": self.redirect_uri,
+            "client_id": self.client_id.strip() if self.client_id else "",
+            "redirect_uri": self.redirect_uri.strip() if self.redirect_uri else "",
             "response_type": "code",
             "scope": self.scope,
             "access_type": "offline",
             "prompt": "consent"
         }
-        query_str = "&".join([f"{k}={v}" for k, v in params.items()])
+        query_str = urlencode(params)
         return f"https://accounts.google.com/o/oauth2/v2/auth?{query_str}"
 
     async def exchange_code_for_tokens(self, code: str) -> bool:
