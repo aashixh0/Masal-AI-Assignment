@@ -9,7 +9,6 @@
 - 🖥️ **Live Web Application (Frontend)**: [https://leadpilot-frontend-4jv0.onrender.com](https://leadpilot-frontend-4jv0.onrender.com)
 - ⚡ **Live REST API (Backend)**: [https://leadpilot-backend-nsik.onrender.com](https://leadpilot-backend-nsik.onrender.com)
 - 📖 **Interactive API Documentation (Swagger)**: [https://leadpilot-backend-nsik.onrender.com/docs](https://leadpilot-backend-nsik.onrender.com/docs)
-- 🔒 **Privacy Policy**: [https://leadpilot-frontend-4jv0.onrender.com/privacy](https://leadpilot-frontend-4jv0.onrender.com/privacy)
 
 ---
 
