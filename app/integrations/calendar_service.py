@@ -10,18 +10,37 @@ logger = logging.getLogger(__name__)
 token_store: Dict[str, Any] = {}
 
 class GoogleCalendarService:
-    def __init__(self):
-        self.client_id = settings.GOOGLE_CLIENT_ID
-        self.client_secret = settings.GOOGLE_CLIENT_SECRET
-        self.redirect_uri = settings.GOOGLE_REDIRECT_URI
-        self.scope = "https://www.googleapis.com/auth/calendar.events"
+    @property
+    def client_id(self) -> str:
+        from dotenv import load_dotenv
+        import os
+        load_dotenv(override=True)
+        return (os.getenv("GOOGLE_CLIENT_ID") or getattr(settings, "GOOGLE_CLIENT_ID", "") or "").strip()
+
+    @property
+    def client_secret(self) -> str:
+        from dotenv import load_dotenv
+        import os
+        load_dotenv(override=True)
+        return (os.getenv("GOOGLE_CLIENT_SECRET") or getattr(settings, "GOOGLE_CLIENT_SECRET", "") or "").strip()
+
+    @property
+    def redirect_uri(self) -> str:
+        from dotenv import load_dotenv
+        import os
+        load_dotenv(override=True)
+        return (os.getenv("GOOGLE_REDIRECT_URI") or getattr(settings, "GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback") or "").strip()
+
+    @property
+    def scope(self) -> str:
+        return "https://www.googleapis.com/auth/calendar.events"
 
     def get_auth_url(self) -> str:
         """Returns the Google OAuth consent URL for Google Calendar permission."""
         from urllib.parse import urlencode
         params = {
-            "client_id": self.client_id.strip() if self.client_id else "",
-            "redirect_uri": self.redirect_uri.strip() if self.redirect_uri else "",
+            "client_id": self.client_id,
+            "redirect_uri": self.redirect_uri,
             "response_type": "code",
             "scope": self.scope,
             "access_type": "offline",

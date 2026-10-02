@@ -35,6 +35,8 @@ export const LeadProvider = ({ children }) => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('calendar_connected') === 'true') {
       setCalendarConnected(true);
+    } else if (params.get('calendar_error') === 'missing_credentials') {
+      setError('Google OAuth credentials (GOOGLE_CLIENT_ID) are not set in .env. Please configure them in Google Cloud Console.');
     }
   }, []);
 
