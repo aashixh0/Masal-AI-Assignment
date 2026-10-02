@@ -4,6 +4,7 @@ import { useLeads } from '../../context/LeadContext';
 
 export default function Navbar() {
   const { setIsModalOpen, calendarConnected } = useLeads();
+  const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://leadpilot-backend-nsik.onrender.com/api');
 
   return (
     <header className="h-16 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-30 px-6 flex items-center justify-between">
@@ -31,7 +32,7 @@ export default function Navbar() {
       <div className="flex items-center gap-3">
         {/* Google Calendar Auth Indicator / Button */}
         <a
-          href="/api/auth/google"
+          href={`${apiBase}/auth/google`}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
             calendarConnected
               ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30 hover:bg-emerald-900/40'
